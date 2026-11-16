@@ -1,1 +1,1239 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
 
+local function findExistingGUI()
+    if CoreGui:FindFirstChild("LunaryHubGUI") then return CoreGui.LunaryHubGUI end
+    if gethui then
+        local success, gui = pcall(function() return gethui():FindFirstChild("LunaryHubGUI") end)
+        if success and gui then return gui end
+    end
+    if LocalPlayer.PlayerGui:FindFirstChild("LunaryHubGUI") then return LocalPlayer.PlayerGui.LunaryHubGUI end
+    return nil
+end
+
+local existingGUI = findExistingGUI()
+if existingGUI then
+    local alertGui = Instance.new("ScreenGui")
+    alertGui.Name = "LunaryHubAlert"
+    alertGui.ResetOnSpawn = false
+    if syn and syn.protect_gui then
+        syn.protect_gui(alertGui)
+        alertGui.Parent = CoreGui
+    elseif gethui then
+        alertGui.Parent = gethui()
+    else
+        alertGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 320, 0, 150)
+    frame.Position = UDim2.new(0.5, -160, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    frame.BorderSizePixel = 0
+    frame.Parent = alertGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(138, 43, 226)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+
+    local msg = Instance.new("TextLabel")
+    msg.Size = UDim2.new(1, -20, 0, 70)
+    msg.Position = UDim2.new(0, 10, 0, 15)
+    msg.BackgroundTransparency = 1
+    msg.Text = "Script já executado caso queira reexecutar aperte em sim"
+    msg.TextColor3 = Color3.fromRGB(255, 255, 255)
+    msg.TextSize = 14
+    msg.Font = Enum.Font.Ubuntu
+    msg.TextWrapped = true
+    msg.Parent = frame
+
+    local btnYes = Instance.new("TextButton")
+    btnYes.Size = UDim2.new(0, 130, 0, 35)
+    btnYes.Position = UDim2.new(0, 20, 1, -45)
+    btnYes.BackgroundColor3 = Color3.fromRGB(50, 35, 75)
+    btnYes.BorderSizePixel = 0
+    btnYes.Text = "Sim"
+    btnYes.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnYes.TextSize = 14
+    btnYes.Font = Enum.Font.Ubuntu
+    btnYes.Parent = frame
+
+    local yCorner = Instance.new("UICorner")
+    yCorner.CornerRadius = UDim.new(0, 6)
+    yCorner.Parent = btnYes
+
+    local btnNo = Instance.new("TextButton")
+    btnNo.Size = UDim2.new(0, 130, 0, 35)
+    btnNo.Position = UDim2.new(1, -150, 1, -45)
+    btnNo.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+    btnNo.BorderSizePixel = 0
+    btnNo.Text = "Não"
+    btnNo.TextColor3 = Color3.fromRGB(200, 150, 255)
+    btnNo.TextSize = 14
+    btnNo.Font = Enum.Font.Ubuntu
+    btnNo.Parent = frame
+
+    local nCorner = Instance.new("UICorner")
+    nCorner.CornerRadius = UDim.new(0, 6)
+    nCorner.Parent = btnNo
+
+    local clickedYes = false
+
+    btnYes.MouseButton1Click:Connect(function()
+        clickedYes = true
+        existingGUI:Destroy()
+        alertGui:Destroy()
+    end)
+
+    btnNo.MouseButton1Click:Connect(function()
+        alertGui:Destroy()
+    end)
+
+    while alertGui.Parent do
+        task.wait(0.1)
+    end
+
+    if not clickedYes then
+        return
+    end
+end
+
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
+
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+LocalPlayer.CharacterAdded:Connect(function(char)
+    character = char
+end)
+
+local executorName = "Lunary Hub"
+pcall(function()
+    if identifyexecutor then
+        local name, version = identifyexecutor()
+        executorName = name or "Executor"
+    end
+end)
+
+local configFileName = "LunaryHub_Config.json"
+local currentHeight = 310
+local currentWidth = 420
+
+local themes = {
+    {Name = "Roxo", Color = Color3.fromRGB(138, 43, 226), Image = "rbxassetid://100520813529785", Rotate = false},
+    {Name = "Laranja", Color = Color3.fromRGB(255, 140, 0), Image = "rbxassetid://120892045184793", Rotate = true},
+    {Name = "Vermelho", Color = Color3.fromRGB(220, 20, 60), Image = "rbxassetid://103720552918722", Rotate = false},
+    {Name = "Azul", Color = Color3.fromRGB(30, 144, 255), Image = "rbxassetid://119363425090057", Rotate = false},
+    {Name = "Branco", Color = Color3.fromRGB(240, 240, 240), Image = "rbxassetid://104473437112093", Rotate = false},
+    {Name = "Rosa", Color = Color3.fromRGB(255, 105, 180), Image = "rbxassetid://82773437026998", Rotate = false},
+    {Name = "Verde", Color = Color3.fromRGB(50, 205, 50), Image = "rbxassetid://100520813529785", Rotate = false}
+}
+
+local currentThemeName = "Roxo"
+local currentThemeColor = Color3.fromRGB(138, 43, 226)
+local currentFloatingImage = "rbxassetid://100520813529785"
+local floatingRotate = false
+
+local autoWinsActive = false
+local coinFarmActive = false
+local skinActive = false
+local autoReturnActive = false
+local antivoidActive = true
+local antiRagdollActive = false
+
+local function saveConfig()
+    if writefile then
+        local data = {
+            theme = currentThemeName,
+            height = currentHeight,
+            width = currentWidth,
+            autoWins = autoWinsActive,
+            coinFarm = coinFarmActive,
+            skin = skinActive,
+            autoReturn = autoReturnActive,
+            antivoid = antivoidActive,
+            antiRagdoll = antiRagdollActive
+        }
+        pcall(function()
+            writefile(configFileName, HttpService:JSONEncode(data))
+        end)
+    end
+end
+
+local function loadConfig()
+    if readfile and pcall(readfile, configFileName) then
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(readfile(configFileName))
+        end)
+        if success and result then
+            if result.theme then
+                for _, t in ipairs(themes) do
+                    if t.Name == result.theme then
+                        currentThemeName = t.Name
+                        currentThemeColor = t.Color
+                        currentFloatingImage = t.Image
+                        floatingRotate = t.Rotate
+                        break
+                    end
+                end
+            end
+            if result.height then currentHeight = math.clamp(result.height, 240, 480) end
+            if result.width then currentWidth = math.clamp(result.width, 300, 600) end
+            if result.antivoid ~= nil then antivoidActive = result.antivoid end
+        end
+    end
+end
+
+loadConfig()
+
+local toolFollowActive = false
+local targetPlayerActive = false
+local noThreatsOptionActive = false
+local noThreatsRunning = false
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LunaryHubGUI"
+ScreenGui.ResetOnSpawn = false
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local FloatingBtn = Instance.new("ImageButton")
+FloatingBtn.Name = "FloatingButton"
+FloatingBtn.Size = UDim2.new(0, 50, 0, 50)
+FloatingBtn.Position = UDim2.new(0, 25, 0.35, -25)
+FloatingBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+FloatingBtn.BackgroundTransparency = 0.2
+FloatingBtn.Image = currentFloatingImage
+FloatingBtn.Draggable = true
+FloatingBtn.Active = true
+FloatingBtn.Visible = true
+FloatingBtn.Parent = ScreenGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1, 0)
+FloatCorner.Parent = FloatingBtn
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, currentWidth, 0, currentHeight)
+MainFrame.Position = UDim2.new(0.5, -currentWidth/2, 0.5, -currentHeight/2)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = currentThemeColor
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -170, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Lunary Hub - " .. executorName
+Title.TextColor3 = currentThemeColor
+Title.TextSize = 15
+Title.Font = Enum.Font.Ubuntu
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 2)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = currentThemeColor
+CloseBtn.TextSize = 16
+CloseBtn.Font = Enum.Font.Ubuntu
+CloseBtn.Parent = TopBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0, 2)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = currentThemeColor
+MinimizeBtn.TextSize = 18
+MinimizeBtn.Font = Enum.Font.Ubuntu
+MinimizeBtn.Parent = TopBar
+
+local isMinimized = false
+
+local SettingsBtn = Instance.new("TextButton")
+SettingsBtn.Size = UDim2.new(0, 65, 0, 25)
+SettingsBtn.Position = UDim2.new(1, -140, 0, 5)
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+SettingsBtn.BorderSizePixel = 0
+SettingsBtn.Text = "Config"
+SettingsBtn.TextColor3 = currentThemeColor
+SettingsBtn.TextSize = 13
+SettingsBtn.Font = Enum.Font.Ubuntu
+SettingsBtn.TextStrokeTransparency = 1
+SettingsBtn.Parent = TopBar
+
+local SettingsBtnCorner = Instance.new("UICorner")
+SettingsBtnCorner.CornerRadius = UDim.new(0, 4)
+SettingsBtnCorner.Parent = SettingsBtn
+
+local SettingsBtnStroke = Instance.new("UIStroke")
+SettingsBtnStroke.Color = currentThemeColor
+SettingsBtnStroke.Thickness = 1.5
+SettingsBtnStroke.Parent = SettingsBtn
+
+local TabBar = Instance.new("ScrollingFrame")
+TabBar.Size = UDim2.new(1, -20, 0, 30)
+TabBar.Position = UDim2.new(0, 10, 0, 42)
+TabBar.BackgroundTransparency = 1
+TabBar.BorderSizePixel = 0
+TabBar.CanvasSize = UDim2.new(0, 360, 0, 0)
+TabBar.ScrollBarThickness = 0
+TabBar.Parent = MainFrame
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.Parent = TabBar
+
+local function createTabButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 82, 1, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.Ubuntu
+    btn.Parent = TabBar
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    return btn
+end
+
+local MainTabBtn = createTabButton("Principal")
+local OpTabBtn = createTabButton("OP")
+local TpTabBtn = createTabButton("Teleportes")
+local CustomTabBtn = createTabButton("Custom")
+
+MainTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainTabBtn.TextColor3 = currentThemeColor
+
+local function createContainer(canvasHeight)
+    local c = Instance.new("ScrollingFrame")
+    c.Size = UDim2.new(1, -20, 1, -85)
+    c.Position = UDim2.new(0, 10, 0, 80)
+    c.BackgroundTransparency = 1
+    c.BorderSizePixel = 0
+    c.CanvasSize = UDim2.new(0, 0, 0, canvasHeight or 200)
+    c.ScrollBarThickness = 4
+    c.Visible = false
+    c.Parent = MainFrame
+
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = c
+    return c
+end
+
+local MainContainer = createContainer(300)
+MainContainer.Visible = true
+local OpContainer = createContainer(300)
+local TpContainer = createContainer(250)
+local CustomContainer = createContainer(120)
+local SettingsContainer = createContainer(210)
+
+local function switchTab(selectedTab)
+    local containers = {Principal = MainContainer, OP = OpContainer, Teleportes = TpContainer, Custom = CustomContainer, Config = SettingsContainer}
+    for name, container in pairs(containers) do
+        if name == selectedTab then
+            container.Visible = true
+            container.Position = UDim2.new(0, 20, 0, 80)
+            TweenService:Create(container, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 10, 0, 80)
+            }):Play()
+        else
+            container.Visible = false
+        end
+    end
+
+    MainTabBtn.BackgroundColor3 = (selectedTab == "Principal") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    MainTabBtn.TextColor3 = (selectedTab == "Principal") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+
+    OpTabBtn.BackgroundColor3 = (selectedTab == "OP") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    OpTabBtn.TextColor3 = (selectedTab == "OP") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+
+    TpTabBtn.BackgroundColor3 = (selectedTab == "Teleportes") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    TpTabBtn.TextColor3 = (selectedTab == "Teleportes") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+
+    CustomTabBtn.BackgroundColor3 = (selectedTab == "Custom") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    CustomTabBtn.TextColor3 = (selectedTab == "Custom") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+end
+
+MainTabBtn.MouseButton1Click:Connect(function() switchTab("Principal") end)
+OpTabBtn.MouseButton1Click:Connect(function() switchTab("OP") end)
+TpTabBtn.MouseButton1Click:Connect(function() switchTab("Teleportes") end)
+CustomTabBtn.MouseButton1Click:Connect(function() switchTab("Custom") end)
+SettingsBtn.MouseButton1Click:Connect(function() switchTab("Config") end)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    TabBar.Visible = not isMinimized
+    MainContainer.Visible = not isMinimized and MainTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    OpContainer.Visible = not isMinimized and OpTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    TpContainer.Visible = not isMinimized and TpTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    CustomContainer.Visible = not isMinimized and CustomTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    SettingsContainer.Visible = not isMinimized and SettingsContainer.Visible
+    
+    local targetSize = isMinimized and UDim2.new(0, currentWidth, 0, 35) or UDim2.new(0, currentWidth, 0, currentHeight)
+    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+
+    MinimizeBtn.Text = isMinimized and "+" or "-"
+    MinimizeBtn.TextColor3 = isMinimized and Color3.fromRGB(100, 255, 100) or currentThemeColor
+end)
+
+FloatingBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+local HeightLabel = Instance.new("TextLabel")
+HeightLabel.Size = UDim2.new(1, 0, 0, 18)
+HeightLabel.BackgroundTransparency = 1
+HeightLabel.Text = "Altura: " .. currentHeight .. "px"
+HeightLabel.TextColor3 = currentThemeColor
+HeightLabel.TextSize = 13
+HeightLabel.Font = Enum.Font.Ubuntu
+HeightLabel.Parent = SettingsContainer
+
+local HeightBar = Instance.new("Frame")
+HeightBar.Size = UDim2.new(1, 0, 0, 9)
+HeightBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+HeightBar.BorderSizePixel = 0
+HeightBar.Parent = SettingsContainer
+
+local HeightBarCorner = Instance.new("UICorner")
+HeightBarCorner.CornerRadius = UDim.new(1, 0)
+HeightBarCorner.Parent = HeightBar
+
+local HeightFill = Instance.new("Frame")
+local initialHScale = math.clamp((currentHeight - 240) / (480 - 240), 0, 1)
+HeightFill.Size = UDim2.new(initialHScale, 0, 1, 0)
+HeightFill.BackgroundColor3 = currentThemeColor
+HeightFill.BorderSizePixel = 0
+HeightFill.Parent = HeightBar
+
+local HeightFillCorner = Instance.new("UICorner")
+HeightFillCorner.CornerRadius = UDim.new(1, 0)
+HeightFillCorner.Parent = HeightFill
+
+local minH, maxH = 240, 480
+local draggingHeight = false
+
+HeightBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingHeight = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if draggingHeight then
+            draggingHeight = false
+            saveConfig()
+        end
+    end
+end)
+
+local WidthLabel = Instance.new("TextLabel")
+WidthLabel.Size = UDim2.new(1, 0, 0, 18)
+WidthLabel.BackgroundTransparency = 1
+WidthLabel.Text = "Largura: " .. currentWidth .. "px"
+WidthLabel.TextColor3 = currentThemeColor
+WidthLabel.TextSize = 13
+WidthLabel.Font = Enum.Font.Ubuntu
+WidthLabel.Parent = SettingsContainer
+
+local WidthBar = Instance.new("Frame")
+WidthBar.Size = UDim2.new(1, 0, 0, 9)
+WidthBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+WidthBar.BorderSizePixel = 0
+WidthBar.Parent = SettingsContainer
+
+local WidthBarCorner = Instance.new("UICorner")
+WidthBarCorner.CornerRadius = UDim.new(1, 0)
+WidthBarCorner.Parent = WidthBar
+
+local WidthFill = Instance.new("Frame")
+local initialWScale = math.clamp((currentWidth - 300) / (600 - 300), 0, 1)
+WidthFill.Size = UDim2.new(initialWScale, 0, 1, 0)
+WidthFill.BackgroundColor3 = currentThemeColor
+WidthFill.BorderSizePixel = 0
+WidthFill.Parent = WidthBar
+
+local WidthFillCorner = Instance.new("UICorner")
+WidthFillCorner.CornerRadius = UDim.new(1, 0)
+WidthFillCorner.Parent = WidthFill
+
+local minW, maxW = 300, 600
+local draggingWidth = false
+
+WidthBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWidth = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if draggingWidth then
+            draggingWidth = false
+            saveConfig()
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local mousePos = UserInputService:GetMouseLocation()
+        
+        if draggingHeight then
+            local absPos = HeightBar.AbsolutePosition
+            local absSize = HeightBar.AbsoluteSize
+            local relX = math.clamp((mousePos.X - absPos.X) / absSize.X, 0, 1)
+            
+            currentHeight = math.floor(minH + (maxH - minH) * relX)
+            HeightFill.Size = UDim2.new(relX, 0, 1, 0)
+            HeightLabel.Text = "Altura: " .. currentHeight .. "px"
+            
+            if not isMinimized then
+                MainFrame.Size = UDim2.new(0, currentWidth, 0, currentHeight)
+            end
+        elseif draggingWidth then
+            local absPos = WidthBar.AbsolutePosition
+            local absSize = WidthBar.AbsoluteSize
+            local relX = math.clamp((mousePos.X - absPos.X) / absSize.X, 0, 1)
+            
+            currentWidth = math.floor(minW + (maxW - minW) * relX)
+            WidthFill.Size = UDim2.new(relX, 0, 1, 0)
+            WidthLabel.Text = "Largura: " .. currentWidth .. "px"
+            
+            if not isMinimized then
+                MainFrame.Size = UDim2.new(0, currentWidth, 0, currentHeight)
+            end
+        end
+    end
+end)
+
+local ColorLabel = Instance.new("TextLabel")
+ColorLabel.Size = UDim2.new(1, 0, 0, 18)
+ColorLabel.BackgroundTransparency = 1
+ColorLabel.Text = "Cor do Tema:"
+ColorLabel.TextColor3 = currentThemeColor
+ColorLabel.TextSize = 13
+ColorLabel.Font = Enum.Font.Ubuntu
+ColorLabel.Parent = SettingsContainer
+
+local ColorsContainer = Instance.new("Frame")
+ColorsContainer.Size = UDim2.new(1, 0, 0, 28)
+ColorsContainer.BackgroundTransparency = 1
+ColorsContainer.Parent = SettingsContainer
+
+local ColorLayout = Instance.new("UIListLayout")
+ColorLayout.FillDirection = Enum.FillDirection.Horizontal
+ColorLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ColorLayout.Padding = UDim.new(0, 6)
+ColorLayout.Parent = ColorsContainer
+
+local function updateTheme(theme)
+    currentThemeName = theme.Name
+    currentThemeColor = theme.Color
+    currentFloatingImage = theme.Image
+    floatingRotate = theme.Rotate
+    
+    FloatingBtn.Image = currentFloatingImage
+    if not floatingRotate then
+        FloatingBtn.Rotation = 0
+    end
+    
+    UIStroke.Color = theme.Color
+    SettingsBtnStroke.Color = theme.Color
+    CloseBtn.TextColor3 = theme.Color
+    MinimizeBtn.TextColor3 = theme.Color
+    Title.TextColor3 = theme.Color
+    SettingsBtn.TextColor3 = theme.Color
+    HeightLabel.TextColor3 = theme.Color
+    WidthLabel.TextColor3 = theme.Color
+    ColorLabel.TextColor3 = theme.Color
+    HeightFill.BackgroundColor3 = theme.Color
+    WidthFill.BackgroundColor3 = theme.Color
+    saveConfig()
+end
+
+for _, theme in ipairs(themes) do
+    local colorBtn = Instance.new("TextButton")
+    colorBtn.Size = UDim2.new(0, 26, 0, 26)
+    colorBtn.BackgroundColor3 = theme.Color
+    colorBtn.BorderSizePixel = 0
+    colorBtn.Text = ""
+    colorBtn.Parent = ColorsContainer
+
+    local cCorner = Instance.new("UICorner")
+    cCorner.CornerRadius = UDim.new(0, 4)
+    cCorner.Parent = colorBtn
+
+    colorBtn.MouseButton1Click:Connect(function()
+        updateTheme(theme)
+    end)
+end
+
+for _, theme in ipairs(themes) do
+    if theme.Name == currentThemeName then
+        updateTheme(theme)
+        break
+    end
+end
+
+local function createToggle(parentContainer, name, defaultState, callback)
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(1, 0, 0, 42)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    ToggleBtn.BorderSizePixel = 0
+    ToggleBtn.Text = "  " .. name .. ": [ " .. (defaultState and "ON" or "OFF") .. " ]"
+    ToggleBtn.TextColor3 = defaultState and currentThemeColor or Color3.fromRGB(180, 180, 180)
+    ToggleBtn.TextSize = 15
+    ToggleBtn.Font = Enum.Font.Ubuntu
+    ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleBtn.Parent = parentContainer
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = ToggleBtn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = defaultState and currentThemeColor or Color3.fromRGB(40, 40, 40)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = ToggleBtn
+
+    local state = defaultState
+    ToggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            ToggleBtn.Text = "  " .. name .. ": [ ON ]"
+            ToggleBtn.TextColor3 = currentThemeColor
+            BtnStroke.Color = currentThemeColor
+        else
+            ToggleBtn.Text = "  " .. name .. ": [ OFF ]"
+            ToggleBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+            BtnStroke.Color = Color3.fromRGB(40, 40, 40)
+        end
+        callback(state)
+        saveConfig()
+    end)
+end
+
+local function createButton(parentContainer, name, callback)
+    local ActionBtn = Instance.new("TextButton")
+    ActionBtn.Size = UDim2.new(1, 0, 0, 42)
+    ActionBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    ActionBtn.BorderSizePixel = 0
+    ActionBtn.Text = "  " .. name
+    ActionBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    ActionBtn.TextSize = 15
+    ActionBtn.Font = Enum.Font.Ubuntu
+    ActionBtn.TextXAlignment = Enum.TextXAlignment.Left
+    ActionBtn.Parent = parentContainer
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = ActionBtn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(40, 40, 40)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = ActionBtn
+
+    ActionBtn.MouseButton1Click:Connect(function()
+        ActionBtn.TextColor3 = currentThemeColor
+        BtnStroke.Color = currentThemeColor
+        
+        task.spawn(callback)
+        
+        task.wait(0.3)
+        ActionBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+        BtnStroke.Color = Color3.fromRGB(40, 40, 40)
+    end)
+end
+
+createToggle(MainContainer, "Auto Wins", false, function(state)
+    autoWinsActive = state
+    task.spawn(function()
+        local posA = Vector3.new(-196, 559, -90)
+        while autoWinsActive do
+            task.wait(1.5)
+            if autoWinsActive and character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(posA)
+            end
+        end
+    end)
+end)
+
+createToggle(MainContainer, "Farm Cubits", false, function(state)
+    coinFarmActive = state
+    task.spawn(function()
+        while coinFarmActive do
+            task.wait(0.2)
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local found = false
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not coinFarmActive then break end
+                    if obj.Name == "CoinPickup" then
+                        local targetPart = nil
+                        if obj:IsA("BasePart") then
+                            targetPart = obj
+                        elseif obj:IsA("Model") and obj.PrimaryPart then
+                            targetPart = obj.PrimaryPart
+                        elseif obj:IsA("Model") then
+                            targetPart = obj:FindFirstChildWhichIsA("BasePart")
+                        end
+                        
+                        if targetPart then
+                            character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                            task.wait(0.3)
+                            found = true
+                        end
+                    end
+                end
+                if not found then
+                    task.wait(1)
+                end
+            end
+        end
+    end)
+end)
+
+local function applySkinTeleport()
+    if not skinActive then return end
+    task.spawn(function()
+        task.wait(0.4)
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local hrp = char.HumanoidRootPart
+            local originalCF = hrp.CFrame
+            
+            hrp.CFrame = CFrame.new(100, 23, 4)
+            task.wait(0.05)
+            
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = originalCF
+            end
+        end
+    end)
+end
+
+createToggle(MainContainer, "Skin", false, function(state)
+    skinActive = state
+    if skinActive then
+        applySkinTeleport()
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    if skinActive then
+        applySkinTeleport()
+    end
+end)
+
+createToggle(MainContainer, "Auto Return", false, function(state)
+    autoReturnActive = state
+end)
+
+local lastValidCFrame = nil
+
+RunService.Heartbeat:Connect(function()
+    if autoReturnActive and character and character:FindFirstChild("HumanoidRootPart") then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            lastValidCFrame = character.HumanoidRootPart.CFrame
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    if autoReturnActive and lastValidCFrame then
+        task.spawn(function()
+            local hrp = newChar:WaitForChild("HumanoidRootPart", 5)
+            if hrp then
+                task.wait(0.3)
+                hrp.CFrame = lastValidCFrame
+            end
+        end)
+    end
+end)
+
+createToggle(OpContainer, "Anti Void", antivoidActive, function(state)
+    antivoidActive = state
+end)
+
+RunService.Heartbeat:Connect(function()
+    if antivoidActive and character and character:FindFirstChild("HumanoidRootPart") then
+        if character.HumanoidRootPart.Position.Y < -40 then
+            local spawnLocation = Workspace:FindFirstChildOfClass("SpawnLocation")
+            if spawnLocation then
+                character.HumanoidRootPart.CFrame = spawnLocation.CFrame + Vector3.new(0, 5, 0)
+                character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            else
+                character.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0)
+                character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end
+        end
+    end
+end)
+
+local godModeActive = false
+local moveButtonsGui = nil
+local jumpRotation = 0
+local floatRotation = 0
+
+local function createCustomMoveControls()
+    if moveButtonsGui then return end
+    moveButtonsGui = Instance.new("Frame")
+    moveButtonsGui.Name = "LunaryMobileControls"
+    moveButtonsGui.Size = UDim2.new(1, 0, 1, 0)
+    moveButtonsGui.BackgroundTransparency = 1
+    moveButtonsGui.Parent = ScreenGui
+
+    local jumpBtn = Instance.new("ImageButton")
+    jumpBtn.Name = "JumpButton"
+    jumpBtn.Size = UDim2.new(0, 90, 0, 90)
+    jumpBtn.Position = UDim2.new(1, -110, 1, -110)
+    jumpBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    jumpBtn.BackgroundTransparency = 0.5
+    jumpBtn.Image = "rbxassetid://137391642241319"
+    jumpBtn.AutoButtonColor = false
+    jumpBtn.Parent = moveButtonsGui
+
+    local jumpCorner = Instance.new("UICorner")
+    jumpCorner.CornerRadius = UDim.new(1, 0)
+    jumpCorner.Parent = jumpBtn
+
+    jumpBtn.MouseButton1Down:Connect(function()
+        if character and character:FindFirstChildOfClass("Humanoid") then
+            character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end)
+end
+
+local function removeCustomMoveControls()
+    if moveButtonsGui then
+        moveButtonsGui:Destroy()
+        moveButtonsGui = nil
+    end
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    if FloatingBtn and FloatingBtn.Parent and floatingRotate then
+        floatRotation = (floatRotation + dt * 150) % 360
+        FloatingBtn.Rotation = floatRotation
+    end
+
+    if moveButtonsGui and moveButtonsGui:FindFirstChild("JumpButton") then
+        jumpRotation = (jumpRotation + dt * 45) % 360
+        moveButtonsGui.JumpButton.Rotation = jumpRotation
+    end
+
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            if godModeActive then
+                humanoid.PlatformStand = false
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+                humanoid.WalkSpeed = 50
+                humanoid.JumpPower = 70
+            end
+        end
+    end
+end)
+
+createToggle(OpContainer, "GodMode", false, function(state)
+    godModeActive = state
+    if state then
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = CFrame.new(-15, 4, -85)
+        end
+        pcall(function()
+            local cam = Workspace.CurrentCamera
+            cam.CameraType = Enum.CameraType.Custom
+            if character and character:FindFirstChildOfClass("Humanoid") then
+                cam.CameraSubject = character:FindFirstChildOfClass("Humanoid")
+            end
+        end)
+        pcall(function()
+            StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
+            StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+        end)
+        pcall(function()
+            for _, obj in ipairs(game:GetDescendants()) do
+                if obj.Name == "GearShopCilent" then
+                    if obj:IsA("LocalScript") or obj:IsA("Script") then
+                        obj.Disabled = true
+                    elseif obj:IsA("ScreenGui") or obj:IsA("Frame") then
+                        obj.Enabled = false
+                        obj.Visible = false
+                    elseif obj:IsA("Instance") then
+                        pcall(function() obj.Archivable = false end)
+                    end
+                end
+            end
+        end)
+        createCustomMoveControls()
+    else
+        pcall(function()
+            for _, obj in ipairs(game:GetDescendants()) do
+                if obj.Name == "GearShopCilent" then
+                    if obj:IsA("LocalScript") or obj:IsA("Script") then
+                        obj.Disabled = false
+                    elseif obj:IsA("ScreenGui") or obj:IsA("Frame") then
+                        obj.Enabled = true
+                        obj.Visible = true
+                    elseif obj:IsA("Instance") then
+                        pcall(function() obj.Archivable = true end)
+                    end
+                end
+            end
+        end)
+        removeCustomMoveControls()
+    end
+end)
+
+createButton(OpContainer, "Get all tools", function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj.Name:sub(-5) == "Giver" then
+                local targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                if targetPart then
+                    character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                    task.wait(0.04)
+                end
+            end
+        end
+    end
+end)
+
+createToggle(OpContainer, "Anti Ragdoll", false, function(state)
+    antiRagdollActive = state
+end)
+
+RunService.Heartbeat:Connect(function()
+    if antiRagdollActive and character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.PlatformStand = false
+            local currentState = humanoid:GetState()
+            if currentState == Enum.HumanoidStateType.Ragdoll or currentState == Enum.HumanoidStateType.Physics then
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
+        end
+    end
+end)
+
+local targetPlayerParts = {}
+
+local function createInvisibleBlock(targetPart, namePrefix)
+    if not targetPart or not targetPart.Parent then return nil end
+    local block = Instance.new("Part")
+    block.Name = namePrefix
+    block.Size = Vector3.new(15, 15, 15)
+    block.Transparency = 1
+    block.CanCollide = true
+    block.CanQuery = false
+    block.CanTouch = false
+    block.Anchored = false
+    block.Massless = true
+    block.CFrame = targetPart.CFrame
+    block.Parent = Workspace
+
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = targetPart
+    weld.Part1 = block
+    weld.Parent = block
+
+    return block
+end
+
+createToggle(OpContainer, "Target Player (Click)", false, function(state)
+    targetPlayerActive = state
+    if not state then
+        for _, block in pairs(targetPlayerParts) do
+            if block and block.Parent then block:Destroy() end
+        end
+        targetPlayerParts = {}
+    end
+end)
+
+local mouse = LocalPlayer:GetMouse()
+mouse.Button1Down:Connect(function()
+    if targetPlayerActive then
+        local target = mouse.Target
+        if target and target.Parent then
+            local char = target.Parent
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local clickedPlayer = Players:GetPlayerFromCharacter(char)
+                if clickedPlayer and clickedPlayer ~= LocalPlayer then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        if targetPlayerParts[clickedPlayer] and targetPlayerParts[clickedPlayer].Parent then
+                            targetPlayerParts[clickedPlayer]:Destroy()
+                            targetPlayerParts[clickedPlayer] = nil
+                        else
+                            targetPlayerParts[clickedPlayer] = createInvisibleBlock(hrp, "ClickedPlayerShield_" .. clickedPlayer.UserId)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local threatParts = {}
+local threatConnections = {}
+local noThreatsGuiButton = nil
+
+local function clearAllThreats()
+    for key, conn in pairs(threatConnections) do
+        if typeof(conn) == "RBXScriptConnection" then conn:Disconnect() end
+    end
+    threatConnections = {}
+
+    for key, block in pairs(threatParts) do
+        if block and block.Parent then
+            block:Destroy()
+        end
+    end
+    threatParts = {}
+end
+
+local function attachPlayerBlock(player)
+    if player == LocalPlayer or not noThreatsOptionActive or not noThreatsRunning then return end
+    
+    local function onCharAdded(char)
+        if not noThreatsOptionActive or not noThreatsRunning then return end
+        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+        if not hrp or not noThreatsOptionActive or not noThreatsRunning then return end
+
+        if threatParts[player] and threatParts[player].Parent then
+            threatParts[player]:Destroy()
+        end
+
+        local block = createInvisibleBlock(hrp, "PlayerShield_" .. player.UserId)
+        threatParts[player] = block
+    end
+
+    if player.Character then
+        task.spawn(onCharAdded, player.Character)
+    end
+    
+    if threatConnections[player] then
+        threatConnections[player]:Disconnect()
+    end
+    threatConnections[player] = player.CharacterAdded:Connect(onCharAdded)
+end
+
+local playerAddedConn
+local playerRemovingConn
+
+local function createNoThreatsScreenButton()
+    if noThreatsGuiButton then return end
+    
+    noThreatsGuiButton = Instance.new("TextButton")
+    noThreatsGuiButton.Name = "NoThreatsScreenBtn"
+    noThreatsGuiButton.Size = UDim2.new(0, 140, 0, 38)
+    noThreatsGuiButton.Position = UDim2.new(0.5, -70, 0, 15)
+    noThreatsGuiButton.BackgroundColor3 = currentThemeColor
+    noThreatsGuiButton.Text = "No Threats: OFF"
+    noThreatsGuiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    noThreatsGuiButton.TextSize = 13
+    noThreatsGuiButton.Font = Enum.Font.Ubuntu
+    noThreatsGuiButton.Draggable = true
+    noThreatsGuiButton.Active = true
+    noThreatsGuiButton.Parent = ScreenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = noThreatsGuiButton
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 1.5
+    stroke.Parent = noThreatsGuiButton
+
+    noThreatsGuiButton.MouseButton1Click:Connect(function()
+        noThreatsRunning = not noThreatsRunning
+        if noThreatsRunning then
+            noThreatsGuiButton.Text = "No Threats: ON"
+            noThreatsGuiButton.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+            
+            for _, player in ipairs(Players:GetPlayers()) do
+                attachPlayerBlock(player)
+            end
+            
+            playerAddedConn = Players.PlayerAdded:Connect(function(player)
+                attachPlayerBlock(player)
+            end)
+            
+            playerRemovingConn = Players.PlayerRemoving:Connect(function(player)
+                if threatConnections[player] then
+                    threatConnections[player]:Disconnect()
+                    threatConnections[player] = nil
+                end
+                if threatParts[player] then
+                    threatParts[player]:Destroy()
+                    threatParts[player] = nil
+                end
+            end)
+        else
+            noThreatsGuiButton.Text = "No Threats: OFF"
+            noThreatsGuiButton.BackgroundColor3 = currentThemeColor
+            
+            if playerAddedConn then playerAddedConn:Disconnect() playerAddedConn = nil end
+            if playerRemovingConn then playerRemovingConn:Disconnect() playerRemovingConn = nil end
+            clearAllThreats()
+        end
+    end)
+end
+
+local function removeNoThreatsScreenButton()
+    if noThreatsGuiButton then
+        noThreatsGuiButton:Destroy()
+        noThreatsGuiButton = nil
+    end
+    noThreatsRunning = false
+    if playerAddedConn then playerAddedConn:Disconnect() playerAddedConn = nil end
+    if playerRemovingConn then playerRemovingConn:Disconnect() playerRemovingConn = nil end
+    clearAllThreats()
+end
+
+createToggle(OpContainer, "No threats", false, function(state)
+    noThreatsOptionActive = state
+    if noThreatsOptionActive then
+        createNoThreatsScreenButton()
+    else
+        removeNoThreatsScreenButton()
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    autoWinsActive = false
+    coinFarmActive = false
+    skinActive = false
+    autoReturnActive = false
+    antivoidActive = false
+    noThreatsOptionActive = false
+    antiRagdollActive = false
+    toolFollowActive = false
+    targetPlayerActive = false
+    godModeActive = false
+    removeCustomMoveControls()
+    removeNoThreatsScreenButton()
+    ScreenGui:Destroy()
+end)
+
+createButton(TpContainer, "Cave", function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(17, -36, 9)
+    end
+end)
+
+createButton(TpContainer, "Squid Game", function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(168, 4, -71)
+    end
+end)
+
+createButton(TpContainer, "Stairs", function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(162, 98, -717)
+    end
+end)
+
+createButton(TpContainer, "Offline room", function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(13, -29, -152)
+    end
+end)
+
+createButton(TpContainer, "Safe Zone", function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(23, -21, 142)
+    end
+end)
+
+createToggle(CustomContainer, "Tool Follow", false, function(state)
+    toolFollowActive = state
+    task.spawn(function()
+        local angle = 0
+        while toolFollowActive do
+            RunService.Heartbeat:Wait()
+            if not toolFollowActive then break end
+            local plr = game:GetService("Players").LocalPlayer
+            local char = plr.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then
+                    angle = angle + 0.08
+                    local radius = 3.5
+                    local x = math.cos(angle) * radius
+                    local z = math.sin(angle) * radius
+                    tool.Grip = CFrame.new(x, 1.5, z) * CFrame.Angles(0, angle, 0)
+                end
+            end
+        end
+    end)
+end)
+
+createButton(CustomContainer, "Tool Far Away (1)", function()
+    local plr = game:GetService("Players").LocalPlayer
+    plr.Character.Humanoid:UnequipTools()
+    local Tools = plr.Backpack:GetChildren()
+    if Tools[1] then
+        Tools[1].Grip = CFrame.new(0, 0, -9999) * CFrame.Angles(0, math.rad(180), 0)
+        Tools[1].Parent = plr.Character
+    end
+end)
