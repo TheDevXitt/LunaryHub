@@ -1,0 +1,560 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+
+task.spawn(function()
+    task.wait(0.5)
+    pcall(function()
+        local vim = game:GetService("VirtualInputManager")
+        if vim then
+            vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+            task.wait(1)
+            vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+        elseif keypress and keyrelease then
+            keypress(0x57)
+            task.wait(1)
+            keyrelease(0x57)
+        end
+    end)
+end)
+
+local function findExistingGUI()
+    if CoreGui:FindFirstChild("LunaryHubGUI") then return CoreGui.LunaryHubGUI end
+    if gethui then
+        local success, gui = pcall(function() return gethui():FindFirstChild("LunaryHubGUI") end)
+        if success and gui then return gui end
+    end
+    if LocalPlayer.PlayerGui:FindFirstChild("LunaryHubGUI") then return LocalPlayer.PlayerGui.LunaryHubGUI end
+    return nil
+end
+
+local existingGUI = findExistingGUI()
+if existingGUI then
+    local alertGui = Instance.new("ScreenGui")
+    alertGui.Name = "LunaryHubAlert"
+    alertGui.ResetOnSpawn = false
+    if syn and syn.protect_gui then
+        syn.protect_gui(alertGui)
+        alertGui.Parent = CoreGui
+    elseif gethui then
+        alertGui.Parent = gethui()
+    else
+        alertGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 320, 0, 150)
+    frame.Position = UDim2.new(0.5, -160, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    frame.BorderSizePixel = 0
+    frame.Parent = alertGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(138, 43, 226)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+
+    local msg = Instance.new("TextLabel")
+    msg.Size = UDim2.new(1, -20, 0, 70)
+    msg.Position = UDim2.new(0, 10, 0, 15)
+    msg.BackgroundTransparency = 1
+    msg.Text = "Script já executado caso queira reexecutar aperte em sim"
+    msg.TextColor3 = Color3.fromRGB(255, 255, 255)
+    msg.TextSize = 14
+    msg.Font = Enum.Font.Ubuntu
+    msg.TextWrapped = true
+    msg.Parent = frame
+
+    local btnYes = Instance.new("TextButton")
+    btnYes.Size = UDim2.new(0, 130, 0, 35)
+    btnYes.Position = UDim2.new(0, 20, 1, -45)
+    btnYes.BackgroundColor3 = Color3.fromRGB(50, 35, 75)
+    btnYes.BorderSizePixel = 0
+    btnYes.Text = "Sim"
+    btnYes.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnYes.TextSize = 14
+    btnYes.Font = Enum.Font.Ubuntu
+    btnYes.Parent = frame
+
+    local yCorner = Instance.new("UICorner")
+    yCorner.CornerRadius = UDim.new(0, 6)
+    yCorner.Parent = btnYes
+
+    local btnNo = Instance.new("TextButton")
+    btnNo.Size = UDim2.new(0, 130, 0, 35)
+    btnNo.Position = UDim2.new(1, -150, 1, -45)
+    btnNo.BackgroundColor3 = Color3.fromRGB(35, 25, 50)
+    btnNo.BorderSizePixel = 0
+    btnNo.Text = "Não"
+    btnNo.TextColor3 = Color3.fromRGB(200, 150, 255)
+    btnNo.TextSize = 14
+    btnNo.Font = Enum.Font.Ubuntu
+    btnNo.Parent = frame
+
+    local nCorner = Instance.new("UICorner")
+    nCorner.CornerRadius = UDim.new(0, 6)
+    nCorner.Parent = btnNo
+
+    local clickedYes = false
+
+    btnYes.MouseButton1Click:Connect(function()
+        clickedYes = true
+        existingGUI:Destroy()
+        alertGui:Destroy()
+    end)
+
+    btnNo.MouseButton1Click:Connect(function()
+        alertGui:Destroy()
+    end)
+
+    while alertGui.Parent do
+        task.wait(0.1)
+    end
+
+    if not clickedYes then
+        return
+    end
+end
+
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
+
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+LocalPlayer.CharacterAdded:Connect(function(char)
+    character = char
+end)
+
+local executorName = "Lunary Hub"
+pcall(function()
+    if identifyexecutor then
+        local name, version = identifyexecutor()
+        executorName = name or "Executor"
+    end
+end)
+
+local configFileName = "LunaryHub_Config.json"
+local currentHeight = 310
+local currentWidth = 420
+
+local themes = {
+    {Name = "Roxo", Color = Color3.fromRGB(138, 43, 226), Image = "rbxassetid://100520813529785", Rotate = false},
+    {Name = "Laranja", Color = Color3.fromRGB(255, 140, 0), Image = "rbxassetid://120892045184793", Rotate = true},
+    {Name = "Vermelho", Color = Color3.fromRGB(220, 20, 60), Image = "rbxassetid://103720552918722", Rotate = false},
+    {Name = "Azul", Color = Color3.fromRGB(30, 144, 255), Image = "rbxassetid://119363425090057", Rotate = false},
+    {Name = "Branco", Color = Color3.fromRGB(240, 240, 240), Image = "rbxassetid://104473437112093", Rotate = false},
+    {Name = "Rosa", Color = Color3.fromRGB(255, 105, 180), Image = "rbxassetid://82773437026998", Rotate = false},
+    {Name = "Verde", Color = Color3.fromRGB(50, 205, 50), Image = "rbxassetid://100520813529785", Rotate = false}
+}
+
+local currentThemeName = "Roxo"
+local currentThemeColor = Color3.fromRGB(138, 43, 226)
+local currentFloatingImage = "rbxassetid://100520813529785"
+local floatingRotate = false
+
+local autoWinsActive = false
+local coinFarmActive = false
+local skinActive = false
+local autoReturnActive = false
+local antivoidActive = true
+local antiRagdollActive = false
+
+local function saveConfig()
+    if writefile then
+        local data = {
+            theme = currentThemeName,
+            height = currentHeight,
+            width = currentWidth,
+            autoWins = autoWinsActive,
+            coinFarm = coinFarmActive,
+            skin = skinActive,
+            autoReturn = autoReturnActive,
+            antivoid = antivoidActive,
+            antiRagdoll = antiRagdollActive
+        }
+        pcall(function()
+            writefile(configFileName, HttpService:JSONEncode(data))
+        end)
+    end
+end
+
+local function loadConfig()
+    if readfile and pcall(readfile, configFileName) then
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(readfile(configFileName))
+        end)
+        if success and result then
+            if result.theme then
+                for _, t in ipairs(themes) do
+                    if t.Name == result.theme then
+                        currentThemeName = t.Name
+                        currentThemeColor = t.Color
+                        currentFloatingImage = t.Image
+                        floatingRotate = t.Rotate
+                        break
+                    end
+                end
+            end
+            if result.height then currentHeight = math.clamp(result.height, 240, 480) end
+            if result.width then currentWidth = math.clamp(result.width, 300, 600) end
+            if result.antivoid ~= nil then antivoidActive = result.antivoid end
+        end
+    end
+end
+
+loadConfig()
+
+local toolFollowActive = false
+local targetPlayerActive = false
+local noThreatsOptionActive = false
+local noThreatsRunning = false
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LunaryHubGUI"
+ScreenGui.ResetOnSpawn = false
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local FloatingBtn = Instance.new("ImageButton")
+FloatingBtn.Name = "FloatingButton"
+FloatingBtn.Size = UDim2.new(0, 50, 0, 50)
+FloatingBtn.Position = UDim2.new(0, 25, 0.35, -25)
+FloatingBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+FloatingBtn.BackgroundTransparency = 0.2
+FloatingBtn.Image = currentFloatingImage
+FloatingBtn.Draggable = true
+FloatingBtn.Active = true
+FloatingBtn.Visible = true
+FloatingBtn.Parent = ScreenGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1, 0)
+FloatCorner.Parent = FloatingBtn
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, currentWidth, 0, currentHeight)
+MainFrame.Position = UDim2.new(0.5, -currentWidth/2, 0.5, -currentHeight/2)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = currentThemeColor
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -170, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Lunary Hub - " .. executorName
+Title.TextColor3 = currentThemeColor
+Title.TextSize = 15
+Title.Font = Enum.Font.Ubuntu
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 2)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = currentThemeColor
+CloseBtn.TextSize = 16
+CloseBtn.Font = Enum.Font.Ubuntu
+CloseBtn.Parent = TopBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0, 2)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = currentThemeColor
+MinimizeBtn.TextSize = 18
+MinimizeBtn.Font = Enum.Font.Ubuntu
+MinimizeBtn.Parent = TopBar
+
+local isMinimized = false
+
+local SettingsBtn = Instance.new("TextButton")
+SettingsBtn.Size = UDim2.new(0, 65, 0, 25)
+SettingsBtn.Position = UDim2.new(1, -140, 0, 5)
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+SettingsBtn.BorderSizePixel = 0
+SettingsBtn.Text = "Config"
+SettingsBtn.TextColor3 = currentThemeColor
+SettingsBtn.TextSize = 13
+SettingsBtn.Font = Enum.Font.Ubuntu
+SettingsBtn.TextStrokeTransparency = 1
+SettingsBtn.Parent = TopBar
+
+local SettingsBtnCorner = Instance.new("UICorner")
+SettingsBtnCorner.CornerRadius = UDim.new(0, 4)
+SettingsBtnCorner.Parent = SettingsBtn
+
+local SettingsBtnStroke = Instance.new("UIStroke")
+SettingsBtnStroke.Color = currentThemeColor
+SettingsBtnStroke.Thickness = 1.5
+SettingsBtnStroke.Parent = SettingsBtn
+
+local TabBar = Instance.new("ScrollingFrame")
+TabBar.Size = UDim2.new(1, -20, 0, 30)
+TabBar.Position = UDim2.new(0, 10, 0, 42)
+TabBar.BackgroundTransparency = 1
+TabBar.BorderSizePixel = 0
+TabBar.CanvasSize = UDim2.new(0, 360, 0, 0)
+TabBar.ScrollBarThickness = 0
+TabBar.Parent = MainFrame
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.Parent = TabBar
+
+local function createTabButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 82, 1, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.Ubuntu
+    btn.Parent = TabBar
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    return btn
+end
+
+local MainTabBtn = createTabButton("Principal")
+local OpTabBtn = createTabButton("OP")
+local TpTabBtn = createTabButton("Teleportes")
+local CustomTabBtn = createTabButton("Custom")
+
+MainTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainTabBtn.TextColor3 = currentThemeColor
+
+local function createContainer(canvasHeight)
+    local c = Instance.new("ScrollingFrame")
+    c.Size = UDim2.new(1, -20, 1, -85)
+    c.Position = UDim2.new(0, 10, 0, 80)
+    c.BackgroundTransparency = 1
+    c.BorderSizePixel = 0
+    c.CanvasSize = UDim2.new(0, 0, 0, canvasHeight or 200)
+    c.ScrollBarThickness = 4
+    c.Visible = false
+    c.Parent = MainFrame
+
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = c
+    return c
+end
+
+local MainContainer = createContainer(300)
+MainContainer.Visible = true
+local OpContainer = createContainer(300)
+local TpContainer = createContainer(250)
+local CustomContainer = createContainer(480)
+local SettingsContainer = createContainer(210)
+
+local function switchTab(selectedTab)
+    local containers = {Principal = MainContainer, OP = OpContainer, Teleportes = TpContainer, Custom = CustomContainer, Config = SettingsContainer}
+    for name, container in pairs(containers) do
+        if name == selectedTab then
+            container.Visible = true
+            container.Position = UDim2.new(0, 20, 0, 80)
+            TweenService:Create(container, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 10, 0, 80)
+            }):Play()
+        else
+            container.Visible = false
+        end
+    end
+
+    MainTabBtn.BackgroundColor3 = (selectedTab == "Principal") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    MainTabBtn.TextColor3 = (selectedTab == "Principal") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+
+    OpTabBtn.BackgroundColor3 = (selectedTab == "OP") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    OpTabBtn.TextColor3 = (selectedTab == "OP") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+
+    TpTabBtn.BackgroundColor3 = (selectedTab == "Teleportes") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    TpTabBtn.TextColor3 = (selectedTab == "Teleportes") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+
+    CustomTabBtn.BackgroundColor3 = (selectedTab == "Custom") and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(15, 15, 15)
+    CustomTabBtn.TextColor3 = (selectedTab == "Custom") and currentThemeColor or Color3.fromRGB(180, 180, 180)
+end
+
+MainTabBtn.MouseButton1Click:Connect(function() switchTab("Principal") end)
+OpTabBtn.MouseButton1Click:Connect(function() switchTab("OP") end)
+TpTabBtn.MouseButton1Click:Connect(function() switchTab("Teleportes") end)
+CustomTabBtn.MouseButton1Click:Connect(function() switchTab("Custom") end)
+SettingsBtn.MouseButton1Click:Connect(function() switchTab("Config") end)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    TabBar.Visible = not isMinimized
+    MainContainer.Visible = not isMinimized and MainTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    OpContainer.Visible = not isMinimized and OpTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    TpContainer.Visible = not isMinimized and TpTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    CustomContainer.Visible = not isMinimized and CustomTabBtn.BackgroundColor3 ~= Color3.fromRGB(15, 15, 15)
+    SettingsContainer.Visible = not isMinimized and SettingsContainer.Visible
+    
+    local targetSize = isMinimized and UDim2.new(0, currentWidth, 0, 35) or UDim2.new(0, currentWidth, 0, currentHeight)
+    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+
+    MinimizeBtn.Text = isMinimized and "+" or "-"
+    MinimizeBtn.TextColor3 = isMinimized and Color3.fromRGB(100, 255, 100) or currentThemeColor
+end)
+
+FloatingBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+local HeightLabel = Instance.new("TextLabel")
+HeightLabel.Size = UDim2.new(1, 0, 0, 18)
+HeightLabel.BackgroundTransparency = 1
+HeightLabel.Text = "Altura: " .. currentHeight .. "px"
+HeightLabel.TextColor3 = currentThemeColor
+HeightLabel.TextSize = 13
+HeightLabel.Font = Enum.Font.Ubuntu
+HeightLabel.Parent = SettingsContainer
+
+local HeightBar = Instance.new("Frame")
+HeightBar.Size = UDim2.new(1, 0, 0, 9)
+HeightBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+HeightBar.BorderSizePixel = 0
+HeightBar.Parent = SettingsContainer
+
+local HeightBarCorner = Instance.new("UICorner")
+HeightBarCorner.CornerRadius = UDim.new(1, 0)
+HeightBarCorner.Parent = HeightBar
+
+local HeightFill = Instance.new("Frame")
+local initialHScale = math.clamp((currentHeight - 240) / (480 - 240), 0, 1)
+HeightFill.Size = UDim2.new(initialHScale, 0, 1, 0)
+HeightFill.BackgroundColor3 = currentThemeColor
+HeightFill.BorderSizePixel = 0
+HeightFill.Parent = HeightBar
+
+local HeightFillCorner = Instance.new("UICorner")
+HeightFillCorner.CornerRadius = UDim.new(1, 0)
+HeightFillCorner.Parent = HeightFill
+
+local minH, maxH = 240, 480
+local draggingHeight = false
+
+HeightBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingHeight = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if draggingHeight then
+            draggingHeight = false
+            saveConfig()
+        end
+    end
+end)
+
+local WidthLabel = Instance.new("TextLabel")
+WidthLabel.Size = UDim2.new(1, 0, 0, 18)
+WidthLabel.BackgroundTransparency = 1
+WidthLabel.Text = "Largura: " .. currentWidth .. "px"
+WidthLabel.TextColor3 = currentThemeColor
+WidthLabel.TextSize = 13
+WidthLabel.Font = Enum.Font.Ubuntu
+WidthLabel.Parent = SettingsContainer
+
+local WidthBar = Instance.new("Frame")
+WidthBar.Size = UDim2.new(1, 0, 0, 9)
+WidthBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+WidthBar.BorderSizePixel = 0
+WidthBar.Parent = SettingsContainer
+
+local WidthBarCorner = Instance.new("UICorner")
+WidthBarCorner.CornerRadius = UDim.new(1, 0)
+WidthBarCorner.Parent = WidthBar
+
+local WidthFill = Instance.new("Frame")
+local initialWScale = math.clamp((currentWidth - 300) / (600 - 300), 0, 1)
+WidthFill.Size = UDim2.new(initialWScale, 0, 1, 0)
+WidthFill.BackgroundColor3 = currentThemeColor
+WidthFill.BorderSizePixel = 0
+WidthFill.Parent = WidthBar
+
+local WidthFillCorner = Instance.new("UICorner")
+WidthFillCorner.CornerRadius = UDim.new(1, 0)
+WidthFillCorner.Parent = WidthFill
+
+local minW, maxW = 300, 600
+local draggingWidth = false
+
+WidthBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWidth = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if draggingWidth then
+            draggingWidth = false
+            saveConfig()
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local mousePos = UserInputService:GetMouseLocation()
+        
+        if draggingHeight then
+            local absPos = HeightBar.AbsolutePosition
+            local absSize = HeightBar.AbsoluteSize
+            local relX = math.clamp((mousePos.X - absPos.X) / absSize.X, 0, 1)
+            
+            currentHeight = math.floor(minH + (maxH - minH) * relX)
+            HeightFill.Size = UDim2.new(relX, 0, 1, 0)
+            HeightLabel.Text = "Altura: " .. currentHeight .. "px"
+            
+            if not isMinimized then
+                MainFrame.Size = UDim2.new(0, currentWidth, 0, currentHeight)
+           
